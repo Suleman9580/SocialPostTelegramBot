@@ -117,7 +117,14 @@ bot.command('generate', async(ctx) => {
                 {
                     role: 'user',
                     content: `write like a human, for humans, craft three engaging socialmedia posts for linkedIn, Twitter (X) and facebook audiences, use simple language. use given time labels just to understand the order of the events. don't mention the time in the posts. Each posts should creatively highlights the following events. Ensure the tone is conversational and impactfull. Focus on engaging the respective platform's audience.
-                    don't share unnecessary things just share things which anyone can just copy and paste. Add some emojis for more user attention, encourage interaction, sharing and driving interest in the events: ${event.map((event) => event.text).join(', ')}.`
+                    don't share unnecessary things just share things which anyone can just copy and paste. Add some emojis for more user attention, encourage interaction, sharing and driving interest in the events: ${event.map((event) => event.text).join(', ')}. The format should look like this:
+                    LinkedIn Post:
+                    -Generated LinkedIn post here.
+                    Twitter Post:
+                    -Generated Twitter post here.
+                    Facebook Post:
+                    -Generated Facebook post here.
+                    `
                 }
             ]
         })
