@@ -155,6 +155,11 @@ bot.command('generate', async(ctx) => {
 //     console.log("sticker", ctx.update.message);
 // } )
 
+bot.help((ctx) => {
+    ctx.reply(`👋 Welcome ${from.first_name} to the Help Section! Feel free to contact suleman.techworks@gmail.com for any kind of query`)
+});
+
+
 bot.on(message('text'), async(ctx)=> {
 
     const from = ctx.update.message.from;
