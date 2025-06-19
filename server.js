@@ -1,8 +1,7 @@
-import {Telegraf} from 'telegraf';
 import {config} from 'dotenv';
 config();
+import {Telegraf} from 'telegraf';
 import userModel from './src/models/User.model.js';
-import mongoose from 'mongoose'; 
 import connectDb from './src/config/db.js';
 import {message} from 'telegraf/filters'
 import eventModel from './src/models/Events.model.js';
@@ -107,6 +106,7 @@ bot.command('generate', async(ctx) => {
     // Make openai Api Call
 
     try {
+        
         const chatCompletion = await openai.chat.completions.create({
             model: process.env.OPENAI_MODEL,
             messages: [
@@ -146,7 +146,6 @@ bot.command('generate', async(ctx) => {
 
     } catch (error) {
         console.log(error)
-
     }
 
 
