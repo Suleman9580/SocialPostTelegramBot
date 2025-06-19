@@ -156,7 +156,9 @@ bot.command('generate', async(ctx) => {
 // } )
 
 bot.help((ctx) => {
-    ctx.reply(`👋 Welcome ${from.first_name} to the Help Section! Feel free to contact suleman.techworks@gmail.com for any kind of query`)
+    const from = ctx.update.message.from;
+    ctx.reply(`👋 Welcome! ${from.first_name} to the Help Section! Feel free to contact
+suleman.techworks@gmail.com for any kind of query`)
 });
 
 
