@@ -67,46 +67,40 @@ Let’s boost your Social Media presence. Ready to start?`)
 });
 
 
-bot.command('generate', async(ctx) => {
-
+bot.command('generate', async (ctx) => {
     const from = ctx.update.message.from;
 
-    // waiting message which is going to be delete
-    const {message_id: stickerId} = await ctx.replyWithSticker("CAACAgQAAxkBAAOQaFMJ4JIaFdz0K20PIvDYCtiz5BoAApwRAAJGpOFRkTuS3L4QYSc2BA");
-    const {message_id: waitingMessageId} = await ctx.reply("Generating your post... Please wait a moment. ⏳");
+    // Send both messages in parallel
+    const [stickerMsg, waitingMsg] = await Promise.all([
+        ctx.replyWithSticker("CAACAgQAAxkBAAOQaFMJ4JIaFdz0K20PIvDYCtiz5BoAApwRAAJGpOFRkTuS3L4QYSc2BA"),
+        ctx.reply("Generating your post... Please wait a moment. ⏳")
+    ]);
+    const stickerId = stickerMsg.message_id;
+    const waitingMessageId = waitingMsg.message_id;
 
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
+    // Calculate day range once
+    const now = new Date();
+    const startOfDay = new Date(now.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(now.setHours(23, 59, 59, 999));
 
-    const endOfDay = new Date();
-    endOfDay.setHours(23, 59, 59, 999);
+    // Only fetch needed fields
+    const events = await eventModel.find(
+        { tgId: from.id, createdAt: { $gte: startOfDay, $lte: endOfDay } },
+        { text: 1, _id: 0 }
+    ).lean();
 
-
-    const event = await eventModel.find({
-        tgId: from.id,
-        createdAt: {
-            $gte: startOfDay,
-            $lte: endOfDay
-        }
-    })
-
-    // console.log(event)
-
-    if(event.length === 0) {
-        // delete waiting message
-        await ctx.deleteMessage(waitingMessageId);
-        await ctx.deleteMessage(stickerId);
-
-        // send reply
+    if (!events.length) {
+        await Promise.all([
+            ctx.deleteMessage(waitingMessageId),
+            ctx.deleteMessage(stickerId)
+        ]);
         return ctx.reply("No events found for today. Please send your daily updates before generating a post.");
     }
 
-    // console.log("events", event)
-
-    // Make openai Api Call
+    // Prepare prompt text
+    const eventTexts = events.map(e => e.text).join(', ');
 
     try {
-        
         const chatCompletion = await openai.chat.completions.create({
             model: process.env.OPENAI_MODEL,
             messages: [
@@ -116,46 +110,40 @@ bot.command('generate', async(ctx) => {
                 },
                 {
                     role: 'user',
-                    content: `write like a human, for humans, craft three engaging socialmedia posts for linkedIn, Twitter (X) and facebook audiences, use simple language. use given time labels just to understand the order of the events. don't mention the time in the posts. Each posts should creatively highlights the following events. Ensure the tone is conversational and impactfull. Focus on engaging the respective platform's audience.
-                    don't share unnecessary things just share things which anyone can just copy and paste. Add some emojis for more user attention, encourage interaction, sharing and driving interest in the events: ${event.map((event) => event.text).join(', ')}. The format should look like this:
-                    🔹 LinkedIn Post:
-                    -Generated LinkedIn post here.
-                    🔹 Twitter(X) Post:
-                    -Generated Twitter post here.
-                    🔹 Facebook Post:
-                    -Generated Facebook post here.
-                    `
+                    content: `write like a human, for humans, craft three engaging socialmedia posts for linkedIn, Twitter (X) and facebook audiences, use simple language. use given time labels just to understand the order of the events. don't mention the time in the posts. Each posts should creatively highlights the following events. Ensure the tone is conversational and impactfull. Focus on engaging the respective platform's audience. encourage interaction, sharing and driving interest in the events: ${eventTexts}.`
                 }
             ]
-        })
+        });
 
-        // console.log("chatCompletion", chatCompletion)
+        // Update token usage in background (don't block user)
+        userModel.findOneAndUpdate(
+            { tgId: from.id },
+            {
+                $inc: {
+                    promptTokens: chatCompletion.usage?.prompt_tokens || 0,
+                    completionTokens: chatCompletion.usage?.completion_tokens || 0,
+                    totalTokens: chatCompletion.usage?.total_tokens || 0
+                }
+            }
+        ).exec();
 
-        // store token count
-        await userModel.findOneAndUpdate({
-            tgId: from.id,
-        },
-    {
-        $inc: {
-            promptTokens: chatCompletion.usage.prompt_tokens,
-            completionTokens: chatCompletion.usage.completion_tokens,
-            totalTokens: chatCompletion.usage.total_tokens
-        }
-    })
+        // Clean up messages in parallel
+        await Promise.all([
+            ctx.deleteMessage(waitingMessageId),
+            ctx.deleteMessage(stickerId)
+        ]);
 
-
-        //delete waiting message before sending the reply
-        await ctx.deleteMessage(waitingMessageId);
-        await ctx.deleteMessage(stickerId);
-        // send the reply
-        await ctx.reply(chatCompletion.choices[0].message.content);
-
+        // Send generated post
+        await ctx.reply(chatCompletion.choices[0]?.message?.content || "No content generated.");
 
     } catch (error) {
-        console.log(error)
+        await Promise.all([
+            ctx.deleteMessage(waitingMessageId),
+            ctx.deleteMessage(stickerId)
+        ]);
+        console.error('OpenAI API error:', error);
+        await ctx.reply('An error occurred while generating your post. Please try again later.');
     }
-
-
 })
 
 // bot.on(message('sticker'), (ctx) => {
