@@ -17,11 +17,6 @@ const openai = new OpenAI({
 });
 
 
-
-
-
-
-
 try {
     await connectDb();
     console.log("database connected successfully");
@@ -31,14 +26,9 @@ try {
 }
 
 
-
-
-
-
 bot.start(async (ctx) => {
 
-    const from = ctx.update.message.from;
-    
+    const from = ctx.update.message.from;   
 
     try {
         
@@ -57,7 +47,8 @@ I'm your Social Media Post Bot 🤖 Just share what you're up to during the day�
     🔹 LinkedIn
     🔹 Twitter (X)
     🔹 Facebook
-Let’s boost your Social Media presence. Ready to start?`)
+Let’s boost your Social Media presence.
+Ready to start?`)
 
   
     } catch (error) {
@@ -178,9 +169,16 @@ bot.on(message('text'), async(ctx)=> {
 
 })
 
+const PORT = process.env.PORT || 3000;
+bot.launch();
+console.log(`Bot started. Listening on port ${PORT}`);
 
-
-bot.launch()
+// Dummy HTTP server to keep Render happy
+import http from 'http';
+http.createServer((req, res) => {
+  res.writeHead(200, { 'Content-Type': 'text/plain' });
+  res.end('Bot is running!\n');
+}).listen(PORT);
 
 process.once('SIGINT', () => {
   bot.stop('SIGINT');
